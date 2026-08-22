@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
+<html lang="zh-CN"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>智能刷题练习系统</title>
@@ -237,6 +236,9 @@
             <h2 id="question-text" class="question-text text-xl font-semibold mb-6 leading-relaxed">题目加载中...</h2>
             
             <div id="options-container" class="space-y-3 mb-6">
+                <div id="qa-input-container" class="hidden mb-4">
+                    <textarea id="qa-answer-input" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-none" placeholder="请在此输入你的答案..."></textarea>
+                </div>
                 <button class="option w-full text-left p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 option-transition" data-option="A">
                     <div class="flex items-center">
                         <div class="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center mr-3 option-marker">A</div>
@@ -282,7 +284,7 @@
                     提交答案
                 </button>
                 <div class="flex space-x-3">
-                    <button id="prev-btn" class="btn-outline flex-1 flex items-center justify-center" disabled>
+                    <button id="prev-btn" class="btn-outline flex-1 flex items-center justify-center" disabled="">
                         <i data-lucide="chevron-left" class="w-5 h-5 mr-2"></i>
                         上一题
                     </button>
@@ -436,7 +438,7 @@
                     <div class="flex items-center justify-between">
                         <span class="text-sm">练习模式</span>
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="practice-mode-toggle" class="sr-only peer" checked>
+                            <input type="checkbox" id="practice-mode-toggle" class="sr-only peer" checked="">
                             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                         </label>
                     </div>
@@ -546,17 +548,9 @@
     </div>
 
     <script>
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块一：数据层 - 题目数据、应用状态、DOM元素缓存
-        // ═══════════════════════════════════════════════════════════════
         // 题目数据
-        const questions = [
-            {"模块": "示例模块", "题目类型": "单选", "题目": "这是一道单选题示例", "选项A": "选项A内容", "选项B": "选项B内容", "选项C": "选项C内容", "选项D": "选项D内容", "标准答案": "A", "解析": "这是题目的解析内容", "ID": 1},
-            {"模块": "示例模块", "题目类型": "多选", "题目": "这是一道多选题示例", "选项A": "选项A内容", "选项B": "选项B内容", "选项C": "选项C内容", "选项D": "选项D内容", "标准答案": "AB", "解析": "这是题目的解析内容", "ID": 2},
-            {"模块": "示例模块", "题目类型": "判断题", "题目": "这是一道判断题示例", "选项A": "正确", "选项B": "错误", "选项C": "", "选项D": "", "标准答案": "A", "解析": "这是题目的解析内容", "ID": 3}
-        ];
-        const modules = ["示例模块"];
+        const questions = [];
+        const modules = [];
         
         // 应用状态
         let currentQuestionIndex = 0;
@@ -684,10 +678,6 @@
         };
         
         // 初始化函数
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块二：核心逻辑层 - 初始化、事件处理、答题流程、题目加载
-        // ═══════════════════════════════════════════════════════════════
         function init() {
             // 初始化数据
             elements.totalQuestions.textContent = `共 ${questions.length} 题`;
@@ -946,26 +936,40 @@
         function handleSubmit() {
             const question = questions[currentQuestionIndex];
             const isMultipleChoice = question.题目类型 && question.题目类型.includes('多选');
+            const isQA = question.题目类型 && (question.题目类型.includes('问答') || question.题目类型.includes('填空') || question.题目类型.includes('简答'));
             const selectedOptions = document.querySelectorAll('.option.selected');
-            
-            if (selectedOptions.length === 0) {
-                showToast('warning', '提示', '请选择答案');
-                return;
-            }
-            
+
             let userAnswer;
-            if (isMultipleChoice) {
-                // 多选题：按字母顺序组合答案
-                userAnswer = Array.from(selectedOptions)
-                    .map(opt => opt.dataset.option)
-                    .sort()
-                    .join('');
+
+            if (isQA) {
+                // 问答题：从文本框获取答案
+                const qaTextarea = document.getElementById('qa-answer-input');
+                userAnswer = qaTextarea ? qaTextarea.value.trim() : '';
+                if (!userAnswer) {
+                    showToast('warning', '提示', '请输入答案');
+                    return;
+                }
             } else {
-                // 单选题/判断题：直接使用选择的答案
-                userAnswer = selectedOptions[0].dataset.option;
+                if (selectedOptions.length === 0) {
+                    showToast('warning', '提示', '请选择答案');
+                    return;
+                }
+                if (isMultipleChoice) {
+                    // 多选题：按字母顺序组合答案
+                    userAnswer = Array.from(selectedOptions)
+                        .map(opt => opt.dataset.option)
+                        .sort()
+                        .join('');
+                } else {
+                    // 单选题/判断题：直接使用选择的答案
+                    userAnswer = selectedOptions[0].dataset.option;
+                }
             }
-            
-            const isCorrect = userAnswer === question.标准答案;
+
+            // 问答题使用模糊匹配（忽略大小写和首尾空格）
+            const isCorrect = isQA
+                ? userAnswer.toLowerCase().replace(/\s+/g, '') === String(question.标准答案).toLowerCase().replace(/\s+/g, '')
+                : userAnswer === question.标准答案;
             
             // 保存之前的状态
             const previousStatus = questionStatus[currentQuestionIndex];
@@ -1001,9 +1005,11 @@
             
             // 显示解析
             showExplanation(question.解析 || '无解析');
-            
-            // 标记正确/错误选项
-            markOptions(question.标准答案, userAnswer);
+
+            // 标记正确/错误选项（问答题跳过）
+            if (!isQA) {
+                markOptions(question.标准答案, userAnswer);
+            }
             
             // 保存答案
             userAnswers[currentQuestionIndex] = userAnswer;
@@ -1170,22 +1176,38 @@
             // 显示选项
             const options = ['A', 'B', 'C', 'D'];
             const isJudgment = question.题目类型 && question.题目类型.includes('判断');
-            
+            const isQA = question.题目类型 && (question.题目类型.includes('问答') || question.题目类型.includes('填空') || question.题目类型.includes('简答'));
+            const qaInput = document.getElementById('qa-input-container');
+            const qaTextarea = document.getElementById('qa-answer-input');
+
+            if (isQA) {
+                // 问答题：隐藏所有选项，显示文本输入框
+                options.forEach(option => {
+                    const optionElement = document.querySelector(`.option[data-option="${option}"]`);
+                    if (optionElement) optionElement.style.display = 'none';
+                });
+                if (qaInput) qaInput.classList.remove('hidden');
+                if (qaTextarea) qaTextarea.value = userAnswers[index] || '';
+            } else if (qaInput) {
+                // 非问答题：隐藏文本输入框
+                qaInput.classList.add('hidden');
+            }
+
             if (isJudgment) {
                 // 判断题：自动生成正确/错误选项
                 const optionA = document.querySelector('.option[data-option="A"]');
                 const optionB = document.querySelector('.option[data-option="B"]');
-                
+
                 if (optionA) {
                     optionA.querySelector('.option-text').textContent = '正确';
                     optionA.style.display = 'block';
                 }
-                
+
                 if (optionB) {
                     optionB.querySelector('.option-text').textContent = '错误';
                     optionB.style.display = 'block';
                 }
-                
+
                 // 隐藏C、D选项
                 options.forEach(option => {
                     if (option === 'C' || option === 'D') {
@@ -1195,7 +1217,7 @@
                         }
                     }
                 });
-            } else {
+            } else if (!isQA) {
                 // 单选题/多选题：显示正常选项
                 options.forEach(option => {
                     const optionElement = document.querySelector(`.option[data-option="${option}"]`);
@@ -1231,37 +1253,43 @@
             if (questionStatus[index] !== 'unanswered') {
                 const userAnswer = userAnswers[index];
                 const correctAnswer = question.标准答案;
-                const isCorrect = userAnswer === correctAnswer;
-                
-                // 显示之前的选择
-                if (correctAnswer.length > 1) {
-                    // 多选题
-                    for (let i = 0; i < userAnswer.length; i++) {
-                        const optionKey = userAnswer[i];
+                const isCorrect = isQA
+                    ? String(userAnswer).toLowerCase().replace(/\s+/g, '') === String(correctAnswer).toLowerCase().replace(/\s+/g, '')
+                    : userAnswer === correctAnswer;
+
+                // 显示之前的选择（问答题跳过）
+                if (!isQA) {
+                    if (correctAnswer.length > 1) {
+                        // 多选题
+                        for (let i = 0; i < userAnswer.length; i++) {
+                            const optionKey = userAnswer[i];
+                            const option = document.querySelector(`.option[data-option="${optionKey}"]`);
+                            if (option) {
+                                option.classList.add('selected');
+                            }
+                        }
+                    } else {
+                        // 单选题/判断题
+                        let optionKey = userAnswer;
+                        if (isJudgment) {
+                            // 判断题：将文字答案转换为选项键
+                            optionKey = userAnswer === '正确' ? 'A' : 'B';
+                        }
                         const option = document.querySelector(`.option[data-option="${optionKey}"]`);
                         if (option) {
                             option.classList.add('selected');
                         }
                     }
-                } else {
-                    // 单选题/判断题
-                    let optionKey = userAnswer;
-                    if (isJudgment) {
-                        // 判断题：将文字答案转换为选项键
-                        optionKey = userAnswer === '正确' ? 'A' : 'B';
-                    }
-                    const option = document.querySelector(`.option[data-option="${optionKey}"]`);
-                    if (option) {
-                        option.classList.add('selected');
-                    }
                 }
-                
+
                 // 显示反馈和解析
                 showFeedback(isCorrect ? 'correct' : 'incorrect', isCorrect ? `回答正确！正确答案是：${correctAnswer}` : `回答错误！正确答案是：${correctAnswer}`);
                 showExplanation(question.解析 || '无解析');
-                
-                // 标记选项
-                markOptions(correctAnswer, userAnswer);
+
+                // 标记选项（问答题跳过）
+                if (!isQA) {
+                    markOptions(correctAnswer, userAnswer);
+                }
             }
         }
         
@@ -1277,10 +1305,6 @@
         }
         
         // 更新统计
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块三：UI更新层 - 统计、进度、选择器、错题列表、状态列表
-        // ═══════════════════════════════════════════════════════════════
         function updateStats() {
             elements.correctCount.textContent = correctCount;
             elements.incorrectCount.textContent = incorrectCount;
@@ -1511,10 +1535,6 @@
         }
         
         // 开始刷错题
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块四：功能层 - 刷错题、筛选、重置、模板下载、选择器更新、计时器、提示消息
-        // ═══════════════════════════════════════════════════════════════
         function startWrongPractice() {
             // 筛选错题
             wrongPracticeQuestions = [];
@@ -1911,17 +1931,9 @@
         }
         
         // 页面加载完成后初始化
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块五：初始化 - DOMContentLoaded事件绑定
-        // ═══════════════════════════════════════════════════════════════
         window.addEventListener('DOMContentLoaded', init);
         
         // 导入题库
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块六：题库管理层 - 导入题库、处理题目数据
-        // ═══════════════════════════════════════════════════════════════
         function importQuestionBank() {
             const fileInput = elements.importFile;
             const file = fileInput.files[0];
@@ -2046,20 +2058,21 @@
                     // 根据题型确定必要字段
                     let requiredFields;
                     const questionType = question.题目类型 || question.题型 || question.type || '单选';
-                    
-                    if (questionType.includes('判断') || questionType.includes('true') || questionType.includes('false')) {
-                        // 判断题只需要题目和标准答案
-                        requiredFields = ['题目', '标准答案'];
-                    } else {
-                        // 选择题需要所有选项
-                        requiredFields = ['题目', '标准答案', '选项A', '选项B', '选项C', '选项D'];
-                    }
-                    
+
+                    // 所有题型只需题目和标准答案，选项为可选
+                    requiredFields = ['题目', '标准答案'];
+
                     requiredFields.forEach(field => {
                         if (!question.hasOwnProperty(field) || !question[field]) {
                             throw new Error(`第${index + 1}题（${questionType}）缺少必要字段：${field}（可能的字段名：${fieldMappings[field].join('、')}）`);
                         }
                     });
+
+                    // 确保所有选项存在（缺失时设为空字符串）
+                    if (!question.选项A) question.选项A = '';
+                    if (!question.选项B) question.选项B = '';
+                    if (!question.选项C) question.选项C = '';
+                    if (!question.选项D) question.选项D = '';
                     
                     // 为判断题自动生成选项
                     if (questionType.includes('判断') || questionType.includes('true') || questionType.includes('false')) {
@@ -2081,6 +2094,8 @@
                             } else if (answer === '错误' || answer === '错' || answer === 'false' || answer === 'f' || answer === '0') {
                                 question.标准答案 = 'B';
                             }
+                        } else if (questionType.includes('问答') || questionType.includes('填空') || questionType.includes('简答')) {
+                            // 问答题/填空题：保留原始文本答案，不做转换
                         } else {
                             // 选择题标准答案处理
                             question.标准答案 = question.标准答案.toUpperCase().replace(/[^A-D]/g, '');
@@ -2098,6 +2113,16 @@
                     }
                     if (!question.题目类型) {
                         question.题目类型 = '单选';
+                    }
+                    
+                    // 验证答案在可用选项范围内
+                    if (question.标准答案 && !questionType.includes('判断')) {
+                        const availableOptions = ['A', 'B', 'C', 'D'].filter(opt => question[`选项${opt}`]);
+                        const answerLetters = question.标准答案.split('');
+                        const invalidAnswers = answerLetters.filter(a => !availableOptions.includes(a));
+                        if (invalidAnswers.length > 0) {
+                            console.warn(`第${index + 1}题标准答案"${question.标准答案}"引用了不存在的选项${invalidAnswers.join('')}，可用选项：${availableOptions.join('、')}`);
+                        }
                     }
                     
                     return question;
@@ -2189,10 +2214,6 @@
         }
         
         // 生成独立HTML
-
-        // ═══════════════════════════════════════════════════════════════
-        // 模块七：导出层 + 图标初始化 - 生成独立HTML文件、Lucide图标渲染
-        // ═══════════════════════════════════════════════════════════════
 function generateStandaloneHtml() {
     showToast('info', '处理中', '正在生成独立HTML文件...');
     
@@ -2245,6 +2266,10 @@ function generateStandaloneHtml() {
         .explanation { margin-top: 12px; padding: 14px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px; font-size: 14px; color: #495057; display: none; }
         .explanation.show { display: block; }
         .explanation-title { font-weight: bold; margin-bottom: 8px; color: #667eea; }
+        .qa-input-container { display: none; margin-bottom: 16px; }
+        .qa-input-container.show { display: block; }
+        .qa-textarea { width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 15px; resize: none; font-family: inherit; line-height: 1.6; }
+        .qa-textarea:focus { border-color: #667eea; outline: none; }
         .nav-buttons { display: flex; justify-content: space-between; margin: 16px; gap: 10px; }
         .nav-btn { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font-size: 14px; cursor: pointer; transition: all 0.2s; }
         .nav-btn:hover:not(:disabled) { background-color: #f8f9fa; border-color: #667eea; color: #667eea; }
@@ -2289,9 +2314,9 @@ function generateStandaloneHtml() {
         .grid-item:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .grid-item.current { box-shadow: 0 0 0 2px #667eea, 0 4px 12px rgba(102,126,234,0.3); transform: scale(1.1); z-index: 1; }
         .grid-item.correct { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
-        .grid-item.correct::after { content: '\\2713'; position: absolute; top: 2px; right: 3px; font-size: 8px; color: #10b981; }
+        .grid-item.correct::after { content: '✓'; position: absolute; top: 2px; right: 3px; font-size: 8px; color: #10b981; }
         .grid-item.incorrect { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
-        .grid-item.incorrect::after { content: '\\2717'; position: absolute; top: 2px; right: 3px; font-size: 8px; color: #f43f5e; }
+        .grid-item.incorrect::after { content: '✗'; position: absolute; top: 2px; right: 3px; font-size: 8px; color: #f43f5e; }
         .grid-nav-summary { padding: 10px 20px; border-top: 1px solid #f0f0f0; background: #fafafa; text-align: center; font-size: 12px; color: #888; }
         @media (max-width: 640px) { .question-card { margin: 12px; padding: 14px; } .nav-buttons { margin: 12px; } .submit-btn { width: calc(100% - 24px); margin: 0 12px 12px; } }
     </style>
@@ -2332,6 +2357,7 @@ function generateStandaloneHtml() {
                 <span class="question-type" id="question-type">题型</span>
             </div>
             <div class="question-text" id="question-text">加载中...</div>
+            <div class="qa-input-container" id="qa-input-container"><textarea class="qa-textarea" id="qa-answer-input" rows="3" placeholder="请在此输入你的答案..."></textarea></div>
             <div class="options">
                 <button class="option" data-option="A" id="option-A"><span class="option-marker">A</span><span class="option-text">选项A</span></button>
                 <button class="option" data-option="B" id="option-B"><span class="option-marker">B</span><span class="option-text">选项B</span></button>
@@ -2411,14 +2437,23 @@ function generateStandaloneHtml() {
                 else { document.querySelectorAll('.option').forEach(x => x.classList.remove('selected')); opt.classList.add('selected'); }
             }));
             $('submit-btn').addEventListener('click', () => {
-                const q = questions[currentQuestionIndex], isMulti = q.题目类型 && q.题目类型.includes('多选'), selected = document.querySelectorAll('.option.selected');
-                if (selected.length === 0) { alert('请选择答案'); return; }
-                const userAnswer = isMulti ? Array.from(selected).map(x => x.dataset.option).sort().join('') : selected[0].dataset.option;
-                const isCorrect = userAnswer === q.标准答案, prevStatus = questionStatus[currentQuestionIndex];
+                const q = questions[currentQuestionIndex], isMulti = q.题目类型 && q.题目类型.includes('多选');
+                var isQA = q.题目类型 && (q.题目类型.includes('问答') || q.题目类型.includes('填空') || q.题目类型.includes('简答'));
+                var userAnswer;
+                if (isQA) {
+                    userAnswer = $('qa-answer-input').value.trim();
+                    if (!userAnswer) { alert('请输入答案'); return; }
+                } else {
+                    const selected = document.querySelectorAll('.option.selected');
+                    if (selected.length === 0) { alert('请选择答案'); return; }
+                    userAnswer = isMulti ? Array.from(selected).map(x => x.dataset.option).sort().join('') : selected[0].dataset.option;
+                }
+                var isCorrect = isQA ? (userAnswer.toLowerCase().replace(/\\s+/g, '') === String(q.标准答案).toLowerCase().replace(/\\s+/g, '')) : (userAnswer === q.标准答案);
+                var prevStatus = questionStatus[currentQuestionIndex];
                 $('feedback').className = 'feedback ' + (isCorrect ? 'correct' : 'incorrect');
                 $('feedback').textContent = isCorrect ? '回答正确！' : '回答错误！正确答案是：' + q.标准答案;
                 $('explanation').classList.add('show'); $('explanation-text').textContent = q.解析 || '无解析';
-                document.querySelectorAll('.option').forEach(x => { const k = x.dataset.option; if (q.标准答案.includes(k)) x.classList.add('correct'); else if (x.classList.contains('selected')) x.classList.add('incorrect'); });
+                if (!isQA) { document.querySelectorAll('.option').forEach(x => { const k = x.dataset.option; if (q.标准答案.includes(k)) x.classList.add('correct'); else if (x.classList.contains('selected')) x.classList.add('incorrect'); }); }
                 questionStatus[currentQuestionIndex] = isCorrect ? 'correct' : 'incorrect';
                 if (isCorrect && prevStatus !== 'correct') { correctCount++; if (prevStatus === 'incorrect') incorrectCount--; }
                 else if (!isCorrect && prevStatus !== 'incorrect') { incorrectCount++; if (prevStatus === 'correct') correctCount--; }
@@ -2447,7 +2482,21 @@ function generateStandaloneHtml() {
             $('grid-nav-close').addEventListener('click', () => { $('grid-nav-panel').classList.remove('show'); });
         }
         function loadQuestion(idx) {
-            const q = questions[idx]; $('current-question').textContent = '第 ' + (idx + 1) + ' 题'; $('question-module').textContent = q.模块 || '未分类'; $('question-type').textContent = q.题目类型 || '单选'; $('question-text').textContent = q.题目 || ''; $('option-A').querySelector('.option-text').textContent = q.选项A || ''; $('option-B').querySelector('.option-text').textContent = q.选项B || ''; $('option-C').querySelector('.option-text').textContent = q.选项C || ''; $('option-D').querySelector('.option-text').textContent = q.选项D || ''; $('option-C').style.display = q.选项C ? 'flex' : 'none'; $('option-D').style.display = q.选项D ? 'flex' : 'none'; document.querySelectorAll('.option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect')); const ua = userAnswers[idx]; if (ua) { const isMulti = q.题目类型 && q.题目类型.includes('多选'); if (isMulti) for (let i = 0; i < ua.length; i++) { const o = document.querySelector('.option[data-option="' + ua[i] + '"]'); if (o) o.classList.add('selected'); } else { const o = document.querySelector('.option[data-option="' + ua + '"]'); if (o) o.classList.add('selected'); } } $('feedback').className = 'feedback'; $('explanation').classList.remove('show'); $('submit-btn').disabled = false; $('prev-btn').disabled = idx === 0; $('next-btn').disabled = idx === questions.length - 1;
+            const q = questions[idx]; $('current-question').textContent = '第 ' + (idx + 1) + ' 题'; $('question-module').textContent = q.模块 || '未分类'; $('question-type').textContent = q.题目类型 || '单选'; $('question-text').textContent = q.题目 || '';
+            var isQA = q.题目类型 && (q.题目类型.includes('问答') || q.题目类型.includes('填空') || q.题目类型.includes('简答'));
+            if (isQA) {
+                $('option-A').style.display = 'none'; $('option-B').style.display = 'none'; $('option-C').style.display = 'none'; $('option-D').style.display = 'none';
+                $('qa-input-container').classList.add('show');
+                $('qa-answer-input').value = userAnswers[idx] || '';
+            } else {
+                $('qa-input-container').classList.remove('show');
+                $('option-A').querySelector('.option-text').textContent = q.选项A || ''; $('option-B').querySelector('.option-text').textContent = q.选项B || ''; $('option-C').querySelector('.option-text').textContent = q.选项C || ''; $('option-D').querySelector('.option-text').textContent = q.选项D || '';
+                $('option-A').style.display = q.选项A ? 'flex' : 'none'; $('option-B').style.display = q.选项B ? 'flex' : 'none'; $('option-C').style.display = q.选项C ? 'flex' : 'none'; $('option-D').style.display = q.选项D ? 'flex' : 'none';
+            }
+            document.querySelectorAll('.option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect'));
+            const ua = userAnswers[idx];
+            if (ua && !isQA) { const isMulti = q.题目类型 && q.题目类型.includes('多选'); if (isMulti) for (let i = 0; i < ua.length; i++) { const o = document.querySelector('.option[data-option="' + ua[i] + '"]'); if (o) o.classList.add('selected'); } else { const o = document.querySelector('.option[data-option="' + ua + '"]'); if (o) o.classList.add('selected'); } }
+            $('feedback').className = 'feedback'; $('explanation').classList.remove('show'); $('submit-btn').disabled = false; $('prev-btn').disabled = idx === 0; $('next-btn').disabled = idx === questions.length - 1;
         }
         function updateStats() { $('correct-count').textContent = correctCount; $('incorrect-count').textContent = incorrectCount; $('remaining-count').textContent = questions.length - (correctCount + incorrectCount); }
         function updateProgress() { const ans = correctCount + incorrectCount; $('progress-fill').style.width = (ans / questions.length * 100) + '%'; }
@@ -2515,5 +2564,5 @@ function generateStandaloneHtml() {
 // 初始化Lucide图标
         lucide.createIcons();
     </script>
-</body>
-</html>
+
+</body></html>
